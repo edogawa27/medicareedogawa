@@ -65,7 +65,15 @@ const LoginForm = ({
     setError(null);
 
     try {
-      // Use Supabase login
+      // For demo purposes, we'll accept any credentials
+      if (!values.email) {
+        throw new Error("Please enter an email address");
+      }
+      if (!values.password) {
+        throw new Error("Please enter a password");
+      }
+
+      // Use login function from context
       await login(values.email, values.password);
       if (onSubmit) {
         onSubmit(values);
@@ -201,7 +209,13 @@ const LoginForm = ({
               type="button"
               variant="link"
               className="text-sm text-primary p-0 h-auto"
-              onClick={onForgotPassword}
+              onClick={() => {
+                alert(
+                  "For demo purposes: Password reset email would be sent to " +
+                    form.getValues().email,
+                );
+                onForgotPassword();
+              }}
             >
               Forgot password?
             </Button>

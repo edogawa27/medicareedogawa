@@ -9,10 +9,13 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Check, ArrowLeft, ArrowRight } from "lucide-react";
+import { Check, ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
 import ServiceSelection from "./ServiceSelection";
 import TimeSlotSelection from "./TimeSlotSelection";
 import PaymentOptions from "../payment/PaymentOptions";
+import { createAppointment } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
+import { format, addHours, parseISO } from "date-fns";
 
 interface BookingFlowProps {
   providerId?: string;
@@ -29,6 +32,7 @@ interface BookingData {
   appointmentDate: Date | null;
   appointmentTime: string | null;
   paymentMethod: string;
+  appointmentId?: string; // Added for confirmation
 }
 
 const BookingFlow = ({
@@ -37,6 +41,7 @@ const BookingFlow = ({
   onComplete = () => {},
   onCancel = () => {},
 }: BookingFlowProps) => {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<number>(initialStep);
   const [bookingData, setBookingData] = useState<BookingData>({
     providerId: providerId,
@@ -47,6 +52,8 @@ const BookingFlow = ({
     appointmentTime: null,
     paymentMethod: "credit_card",
   });
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const steps = [
     { id: "service", title: "Service Selection" },
@@ -85,9 +92,71 @@ const BookingFlow = ({
     }));
   };
 
-  const handlePaymentComplete = () => {
-    setCurrentStep(3);
-    onComplete(bookingData);
+  const handlePaymentComplete = async () => {
+    if (!user) {
+      setError("You must be logged in to book an appointment");
+      return;
+    }
+
+    if (!bookingData.appointmentDate || !bookingData.appointmentTime) {
+      setError("Please select a date and time for your appointment");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Calculate end time (add 1 hour by default or use service duration)
+      const startTime = bookingData.appointmentTime;
+      const appointmentDate = format(bookingData.appointmentDate, "yyyy-MM-dd");
+
+      // Calculate end time by adding the service duration
+      const startDateTime = new Date(`${appointmentDate}T${startTime}`);
+      const endDateTime = addHours(
+        startDateTime,
+        bookingData.serviceDuration / 60,
+      );
+      const endTime = format(endDateTime, "HH:mm");
+
+      // Create appointment in the database
+      const result = await createAppointment({
+        patient_id: user.id,
+        provider_id: bookingData.providerId,
+        service_id: bookingData.serviceId,
+        appointment_date: appointmentDate,
+        start_time: startTime,
+        end_time: endTime,
+        duration: bookingData.serviceDuration,
+        special_requirements: bookingData.specialRequirements,
+        payment_method: bookingData.paymentMethod,
+        amount: calculateAmount(),
+      });
+
+      // Update booking data with the appointment ID
+      setBookingData((prev) => ({
+        ...prev,
+        appointmentId: result.id,
+      }));
+
+      // Move to confirmation step
+      setCurrentStep(3);
+      onComplete({
+        ...bookingData,
+        appointmentId: result.id,
+      });
+    } catch (err) {
+      console.error("Error creating appointment:", err);
+      setError("Failed to book appointment. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const calculateAmount = () => {
+    // Simple calculation based on service duration
+    const baseRate = 75; // per hour
+    return (bookingData.serviceDuration / 60) * baseRate;
   };
 
   const getStepContent = () => {
@@ -123,12 +192,6 @@ const BookingFlow = ({
       default:
         return null;
     }
-  };
-
-  const calculateAmount = () => {
-    // Simple calculation based on service duration
-    const baseRate = 75; // per hour
-    return (bookingData.serviceDuration / 60) * baseRate;
   };
 
   const getServiceName = () => {

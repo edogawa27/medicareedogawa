@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,8 +9,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, addDays, isSameDay, startOfToday } from "date-fns";
-import { ChevronLeft, ChevronRight, Clock } from "lucide-react";
+import { format, addDays, isSameDay, startOfToday, addMonths } from "date-fns";
+import { ChevronLeft, ChevronRight, Clock, Loader2 } from "lucide-react";
+import { getAvailableDates, getAvailableTimeSlots } from "@/lib/api";
 
 interface TimeSlotSelectionProps {
   onSelectTimeSlot?: (date: Date, time: string) => void;
@@ -33,12 +34,42 @@ const TimeSlotSelection = ({
   const [currentView, setCurrentView] = useState<"calendar" | "time">(
     "calendar",
   );
+  const [dates, setDates] = useState<Date[]>(availableDates);
+  const [timeSlots, setTimeSlots] =
+    useState<Record<string, string[]>>(availableTimeSlots);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Generate mock data if none provided
-  const mockDates =
-    availableDates.length > 0
-      ? availableDates
-      : [
+  // Fetch available dates and time slots from the API
+  useEffect(() => {
+    const fetchAvailability = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Only fetch from API if no data was provided as props
+        if (availableDates.length === 0) {
+          const fetchedDates = await getAvailableDates(
+            providerId,
+            today,
+            addMonths(today, 1),
+          );
+          setDates(fetchedDates);
+        }
+
+        if (Object.keys(availableTimeSlots).length === 0) {
+          const fetchedTimeSlots = await getAvailableTimeSlots(
+            providerId,
+            today,
+            addMonths(today, 1),
+          );
+          setTimeSlots(fetchedTimeSlots);
+        }
+      } catch (err) {
+        console.error("Error fetching availability:", err);
+        setError("Failed to load available time slots. Please try again.");
+
+        // Fallback to mock data if API fails
+        setDates([
           today,
           addDays(today, 1),
           addDays(today, 2),
@@ -46,12 +77,9 @@ const TimeSlotSelection = ({
           addDays(today, 5),
           addDays(today, 7),
           addDays(today, 8),
-        ];
+        ]);
 
-  const mockTimeSlots =
-    Object.keys(availableTimeSlots).length > 0
-      ? availableTimeSlots
-      : {
+        setTimeSlots({
           [format(today, "yyyy-MM-dd")]: [
             "09:00",
             "10:00",
@@ -94,7 +122,14 @@ const TimeSlotSelection = ({
             "15:00",
             "16:00",
           ],
-        };
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchAvailability();
+  }, [providerId, availableDates, availableTimeSlots]);
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date);
@@ -114,11 +149,11 @@ const TimeSlotSelection = ({
   const getAvailableTimesForSelectedDate = () => {
     if (!selectedDate) return [];
     const dateKey = format(selectedDate, "yyyy-MM-dd");
-    return mockTimeSlots[dateKey] || [];
+    return timeSlots[dateKey] || [];
   };
 
   const isDateAvailable = (date: Date) => {
-    return mockDates.some((availableDate) => isSameDay(availableDate, date));
+    return dates.some((availableDate) => isSameDay(availableDate, date));
   };
 
   return (

@@ -1,15 +1,29 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Calendar, Clock, MapPin, MoreVertical, User } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  MoreVertical,
+  User,
+  Loader2,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/context/AuthContext";
+import {
+  getAppointmentsByPatient,
+  getAppointmentsByProvider,
+  updateAppointmentStatus,
+} from "@/lib/api";
+import { format } from "date-fns";
 
 interface AppointmentProps {
   id: string;
@@ -102,25 +116,88 @@ const AppointmentCard = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>View Details</DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    alert(`Viewing details for appointment ${appointment.id}.`)
+                  }
+                >
+                  View Details
+                </DropdownMenuItem>
                 {appointment.status === "upcoming" && (
                   <>
-                    <DropdownMenuItem>Reschedule</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600">
-                      Cancel
+                    <DropdownMenuItem
+                      onClick={() =>
+                        alert(
+                          `Rescheduling appointment ${appointment.id}. This feature will be available soon.`,
+                        )
+                      }
+                    >
+                      Reschedule
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600"
+                      onClick={() =>
+                        handleAppointmentAction(appointment.id, "cancel")
+                      }
+                      disabled={actionInProgress === appointment.id}
+                    >
+                      {actionInProgress === appointment.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Cancelling...
+                        </>
+                      ) : (
+                        "Cancel"
+                      )}
                     </DropdownMenuItem>
                   </>
                 )}
                 {appointment.status === "completed" && (
-                  <DropdownMenuItem>Leave Review</DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      alert(
+                        `Opening review form for appointment ${appointment.id}. This feature will be available soon.`,
+                      )
+                    }
+                  >
+                    Leave Review
+                  </DropdownMenuItem>
                 )}
                 {userType === "provider" &&
                   appointment.status === "upcoming" && (
-                    <DropdownMenuItem>Start Session</DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        handleAppointmentAction(appointment.id, "start")
+                      }
+                      disabled={actionInProgress === appointment.id}
+                    >
+                      {actionInProgress === appointment.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Starting...
+                        </>
+                      ) : (
+                        "Start Session"
+                      )}
+                    </DropdownMenuItem>
                   )}
                 {userType === "provider" &&
                   appointment.status === "in-progress" && (
-                    <DropdownMenuItem>Complete Session</DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() =>
+                        handleAppointmentAction(appointment.id, "complete")
+                      }
+                      disabled={actionInProgress === appointment.id}
+                    >
+                      {actionInProgress === appointment.id ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Completing...
+                        </>
+                      ) : (
+                        "Complete Session"
+                      )}
+                    </DropdownMenuItem>
                   )}
               </DropdownMenuContent>
             </DropdownMenu>
@@ -130,27 +207,83 @@ const AppointmentCard = ({
         <div className="flex justify-end mt-4 gap-2">
           {appointment.status === "upcoming" && (
             <>
-              <Button variant="outline" size="sm">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  alert(
+                    `Rescheduling appointment ${appointment.id}. This feature will be available soon.`,
+                  )
+                }
+              >
                 Reschedule
               </Button>
-              <Button variant="destructive" size="sm">
-                Cancel
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() =>
+                  handleAppointmentAction(appointment.id, "cancel")
+                }
+                disabled={actionInProgress === appointment.id}
+              >
+                {actionInProgress === appointment.id ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Cancelling...
+                  </>
+                ) : (
+                  "Cancel"
+                )}
               </Button>
             </>
           )}
           {appointment.status === "completed" && userType === "patient" && (
-            <Button variant="outline" size="sm">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                alert(
+                  `Opening review form for appointment ${appointment.id}. This feature will be available soon.`,
+                )
+              }
+            >
               Leave Review
             </Button>
           )}
           {userType === "provider" && appointment.status === "upcoming" && (
-            <Button variant="default" size="sm">
-              Start Session
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => handleAppointmentAction(appointment.id, "start")}
+              disabled={actionInProgress === appointment.id}
+            >
+              {actionInProgress === appointment.id ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Starting...
+                </>
+              ) : (
+                "Start Session"
+              )}
             </Button>
           )}
           {userType === "provider" && appointment.status === "in-progress" && (
-            <Button variant="default" size="sm">
-              Complete Session
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() =>
+                handleAppointmentAction(appointment.id, "complete")
+              }
+              disabled={actionInProgress === appointment.id}
+            >
+              {actionInProgress === appointment.id ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Completing...
+                </>
+              ) : (
+                "Complete Session"
+              )}
             </Button>
           )}
         </div>
@@ -163,7 +296,109 @@ const AppointmentList = ({
   appointments = [],
   userType = "patient",
 }: AppointmentListProps) => {
-  // Default appointments if none provided
+  const { user } = useAuth();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [fetchedAppointments, setFetchedAppointments] = useState<
+    AppointmentProps[]
+  >([]);
+  const [actionInProgress, setActionInProgress] = useState<string | null>(null);
+
+  // Fetch appointments from the API
+  useEffect(() => {
+    const fetchAppointments = async () => {
+      if (!user) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        let apiAppointments;
+
+        if (userType === "patient") {
+          apiAppointments = await getAppointmentsByPatient(user.id);
+        } else if (userType === "provider") {
+          apiAppointments = await getAppointmentsByProvider(user.id);
+        } else {
+          // Admin would have a different function
+          apiAppointments = [];
+        }
+
+        // Map API appointments to the format expected by the component
+        const mappedAppointments = apiAppointments.map((apt) => ({
+          id: apt.id,
+          patientName: apt.patient_name || "Unknown Patient",
+          providerName: apt.provider_name || "Unknown Provider",
+          serviceType: apt.service_name || "Unknown Service",
+          date: format(new Date(apt.appointment_date), "MMM d, yyyy"),
+          time: `${apt.start_time.substring(0, 5)} - ${apt.end_time.substring(0, 5)}`,
+          location: "Home Visit", // Default location
+          status: apt.status as
+            | "upcoming"
+            | "completed"
+            | "cancelled"
+            | "in-progress",
+        }));
+
+        setFetchedAppointments(mappedAppointments);
+      } catch (err) {
+        console.error("Error fetching appointments:", err);
+        setError("Failed to load appointments. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAppointments();
+  }, [user, userType]);
+
+  // Handle appointment actions
+  const handleAppointmentAction = async (
+    appointmentId: string,
+    action: string,
+  ) => {
+    setActionInProgress(appointmentId);
+    try {
+      switch (action) {
+        case "cancel":
+          await updateAppointmentStatus(appointmentId, "cancelled");
+          break;
+        case "start":
+          await updateAppointmentStatus(appointmentId, "in-progress");
+          break;
+        case "complete":
+          await updateAppointmentStatus(appointmentId, "completed");
+          break;
+      }
+
+      // Update the local state to reflect the change
+      setFetchedAppointments((prev) =>
+        prev.map((apt) => {
+          if (apt.id === appointmentId) {
+            let newStatus:
+              | "upcoming"
+              | "in-progress"
+              | "completed"
+              | "cancelled" = apt.status;
+
+            if (action === "cancel") newStatus = "cancelled";
+            if (action === "start") newStatus = "in-progress";
+            if (action === "complete") newStatus = "completed";
+
+            return { ...apt, status: newStatus };
+          }
+          return apt;
+        }),
+      );
+    } catch (err) {
+      console.error(`Error ${action} appointment:`, err);
+      alert(`Failed to ${action} appointment. Please try again.`);
+    } finally {
+      setActionInProgress(null);
+    }
+  };
+
+  // Default appointments if none provided and API fetch failed
   const defaultAppointments: AppointmentProps[] = [
     {
       id: "APT-1234",
@@ -207,11 +442,28 @@ const AppointmentList = ({
     },
   ];
 
+  // Use provided appointments, or fetched appointments, or default appointments
   const displayAppointments =
-    appointments.length > 0 ? appointments : defaultAppointments;
+    appointments.length > 0
+      ? appointments
+      : fetchedAppointments.length > 0
+        ? fetchedAppointments
+        : defaultAppointments;
 
   return (
     <div className="w-full bg-gray-50 p-4 rounded-lg">
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="ml-2">Loading appointments...</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 p-4 rounded-md mb-4">
+          {error}
+        </div>
+      )}
       <CardHeader className="px-0 pt-0">
         <CardTitle className="text-2xl font-bold">Appointments</CardTitle>
       </CardHeader>

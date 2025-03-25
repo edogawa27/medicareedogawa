@@ -94,7 +94,9 @@ const PatientDashboard = ({
     {
       icon: <MessageSquare className="h-5 w-5" />,
       label: "Messages",
-      action: () => {},
+      action: () => {
+        alert("Messages feature will be available soon!");
+      },
     },
     {
       icon: <Clock className="h-5 w-5" />,
@@ -132,8 +134,12 @@ const PatientDashboard = ({
   };
 
   const handleBookNow = (providerId: string) => {
-    // In a real app, this would navigate to the booking flow
-    console.log(`Booking provider with ID: ${providerId}`);
+    // Navigate to booking flow with the selected provider
+    setSelectedProviderId(providerId);
+    setActiveTab("search");
+    alert(
+      `Booking appointment with provider ID: ${providerId}. In a full implementation, this would open the booking flow.`,
+    );
   };
 
   return (
@@ -184,6 +190,7 @@ const PatientDashboard = ({
                   <Card
                     key={index}
                     className="cursor-pointer hover:shadow-md transition-shadow bg-white"
+                    onClick={action.action}
                   >
                     <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                       <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center mb-3">
@@ -254,13 +261,38 @@ const PatientDashboard = ({
                           </div>
                         </div>
                         <div className="flex justify-end mt-3 gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              alert(
+                                `Rescheduling appointment ${appointment.id}. In a full implementation, this would open the scheduling interface.`,
+                              );
+                            }}
+                          >
                             Reschedule
                           </Button>
                           {appointment.status === "in-progress" ? (
-                            <Button size="sm">Join Session</Button>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                alert(
+                                  `Joining session for appointment ${appointment.id}. In a full implementation, this would open the video call interface.`,
+                                );
+                              }}
+                            >
+                              Join Session
+                            </Button>
                           ) : (
-                            <Button variant="destructive" size="sm">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => {
+                                alert(
+                                  `Cancelling appointment ${appointment.id}. In a full implementation, this would update the appointment status.`,
+                                );
+                              }}
+                            >
                               Cancel
                             </Button>
                           )}

@@ -9,6 +9,153 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          amount: number | null
+          appointment_date: string
+          created_at: string | null
+          duration: number
+          end_time: string
+          id: string
+          patient_id: string
+          payment_method: string | null
+          payment_status: string | null
+          provider_id: string
+          service_id: string
+          special_requirements: string | null
+          start_time: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number | null
+          appointment_date: string
+          created_at?: string | null
+          duration: number
+          end_time: string
+          id?: string
+          patient_id: string
+          payment_method?: string | null
+          payment_status?: string | null
+          provider_id: string
+          service_id: string
+          special_requirements?: string | null
+          start_time: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number | null
+          appointment_date?: string
+          created_at?: string | null
+          duration?: number
+          end_time?: string
+          id?: string
+          patient_id?: string
+          payment_method?: string | null
+          payment_status?: string | null
+          provider_id?: string
+          service_id?: string
+          special_requirements?: string | null
+          start_time?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      provider_availability: {
+        Row: {
+          created_at: string | null
+          date: string
+          end_time: string
+          id: string
+          is_available: boolean | null
+          provider_id: string
+          start_time: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          end_time: string
+          id?: string
+          is_available?: boolean | null
+          provider_id: string
+          start_time: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          end_time?: string
+          id?: string
+          is_available?: boolean | null
+          provider_id?: string
+          start_time?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_availability_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      services: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          estimated_duration: number
+          icon: string | null
+          id: string
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          estimated_duration: number
+          icon?: string | null
+          id?: string
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          estimated_duration?: number
+          icon?: string | null
+          id?: string
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           avatar: string | null
@@ -44,7 +191,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      reschedule_appointment: {
+        Args: {
+          p_appointment_id: string
+          p_new_date: string
+          p_new_start_time: string
+          p_new_end_time: string
+          p_provider_id: string
+          p_old_date: string
+          p_old_start_time: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

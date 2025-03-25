@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -20,7 +20,9 @@ import {
   Stethoscope,
   Thermometer,
   User,
+  Loader2,
 } from "lucide-react";
+import { getServices } from "@/lib/api";
 
 interface ServiceOption {
   id: string;
@@ -28,6 +30,7 @@ interface ServiceOption {
   description: string;
   icon: React.ReactNode;
   estimatedDuration: string;
+  estimated_duration?: number; // From API
 }
 
 interface ServiceSelectionProps {
@@ -47,49 +50,123 @@ const ServiceSelection = ({
     useState<string>("general-checkup");
   const [duration, setDuration] = useState<number>(60);
   const [requirements, setRequirements] = useState<string>("");
+  const [serviceOptions, setServiceOptions] = useState<ServiceOption[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const serviceOptions: ServiceOption[] = [
-    {
-      id: "general-checkup",
-      name: "General Health Checkup",
-      description:
-        "Basic health assessment including vital signs and general wellness evaluation",
-      icon: <Stethoscope className="h-6 w-6 text-primary" />,
-      estimatedDuration: "30-60 min",
-    },
-    {
-      id: "nursing-care",
-      name: "Nursing Care",
-      description:
-        "Professional nursing services including wound care, injections, and monitoring",
-      icon: <Heart className="h-6 w-6 text-primary" />,
-      estimatedDuration: "45-90 min",
-    },
-    {
-      id: "physiotherapy",
-      name: "Physiotherapy Session",
-      description:
-        "Therapeutic exercises and physical treatments to improve mobility and function",
-      icon: <User className="h-6 w-6 text-primary" />,
-      estimatedDuration: "60-90 min",
-    },
-    {
-      id: "home-monitoring",
-      name: "Home Health Monitoring",
-      description:
-        "Regular monitoring of vital signs and health parameters for chronic conditions",
-      icon: <Thermometer className="h-6 w-6 text-primary" />,
-      estimatedDuration: "30-45 min",
-    },
-    {
-      id: "elderly-care",
-      name: "Elderly Care Assistance",
-      description:
-        "Specialized care services for elderly patients including mobility assistance",
-      icon: <Home className="h-6 w-6 text-primary" />,
-      estimatedDuration: "60-120 min",
-    },
-  ];
+  // Fetch services from the API
+  useEffect(() => {
+    const fetchServices = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const services = await getServices();
+
+        // Map the API services to the format expected by the component
+        const mappedServices = services.map((service) => {
+          // Map icon string to React component
+          let iconComponent;
+          switch (service.icon) {
+            case "Stethoscope":
+              iconComponent = <Stethoscope className="h-6 w-6 text-primary" />;
+              break;
+            case "Heart":
+              iconComponent = <Heart className="h-6 w-6 text-primary" />;
+              break;
+            case "User":
+              iconComponent = <User className="h-6 w-6 text-primary" />;
+              break;
+            case "Thermometer":
+              iconComponent = <Thermometer className="h-6 w-6 text-primary" />;
+              break;
+            case "Home":
+              iconComponent = <Home className="h-6 w-6 text-primary" />;
+              break;
+            default:
+              iconComponent = <Stethoscope className="h-6 w-6 text-primary" />;
+          }
+
+          return {
+            id: service.id,
+            name: service.name,
+            description: service.description,
+            icon: iconComponent,
+            estimatedDuration: `${service.estimated_duration} min`,
+            estimated_duration: service.estimated_duration,
+          };
+        });
+
+        setServiceOptions(mappedServices);
+
+        // Set default duration based on the first service
+        if (mappedServices.length > 0) {
+          setSelectedService(mappedServices[0].id);
+          setDuration(mappedServices[0].estimated_duration || 60);
+        }
+      } catch (err) {
+        console.error("Error fetching services:", err);
+        setError("Failed to load services. Please try again.");
+
+        // Fallback to hardcoded services if API fails
+        setServiceOptions([
+          {
+            id: "general-checkup",
+            name: "General Health Checkup",
+            description:
+              "Basic health assessment including vital signs and general wellness evaluation",
+            icon: <Stethoscope className="h-6 w-6 text-primary" />,
+            estimatedDuration: "30-60 min",
+          },
+          {
+            id: "nursing-care",
+            name: "Nursing Care",
+            description:
+              "Professional nursing services including wound care, injections, and monitoring",
+            icon: <Heart className="h-6 w-6 text-primary" />,
+            estimatedDuration: "45-90 min",
+          },
+          {
+            id: "physiotherapy",
+            name: "Physiotherapy Session",
+            description:
+              "Therapeutic exercises and physical treatments to improve mobility and function",
+            icon: <User className="h-6 w-6 text-primary" />,
+            estimatedDuration: "60-90 min",
+          },
+          {
+            id: "home-monitoring",
+            name: "Home Health Monitoring",
+            description:
+              "Regular monitoring of vital signs and health parameters for chronic conditions",
+            icon: <Thermometer className="h-6 w-6 text-primary" />,
+            estimatedDuration: "30-45 min",
+          },
+          {
+            id: "elderly-care",
+            name: "Elderly Care Assistance",
+            description:
+              "Specialized care services for elderly patients including mobility assistance",
+            icon: <Home className="h-6 w-6 text-primary" />,
+            estimatedDuration: "60-120 min",
+          },
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
+  // Update duration when service changes
+  useEffect(() => {
+    const selectedServiceOption = serviceOptions.find(
+      (service) => service.id === selectedService,
+    );
+    if (selectedServiceOption?.estimated_duration) {
+      setDuration(selectedServiceOption.estimated_duration);
+    }
+  }, [selectedService, serviceOptions]);
 
   const handleSubmit = () => {
     onNext(selectedService, duration, requirements);

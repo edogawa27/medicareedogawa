@@ -76,6 +76,15 @@ const PaymentOptions = ({
     }, 2000);
   };
 
+  // Disable the payment button if processing or if it's a demo
+  const isPaymentDisabled =
+    isProcessing ||
+    (selectedMethod === "credit_card" &&
+      (!document.getElementById("cardName")?.value ||
+        !document.getElementById("cardNumber")?.value ||
+        !document.getElementById("expiry")?.value ||
+        !document.getElementById("cvv")?.value));
+
   return (
     <div className="w-full max-w-md mx-auto bg-white p-4 rounded-lg shadow-sm">
       {!isComplete ? (
@@ -187,11 +196,16 @@ const PaymentOptions = ({
             <Button
               className="w-full"
               onClick={handlePayment}
-              disabled={isProcessing}
+              disabled={isPaymentDisabled}
             >
-              {isProcessing
-                ? "Processing..."
-                : `Pay ${currency} ${amount.toFixed(2)}`}
+              {isProcessing ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                `Pay ${currency} ${amount.toFixed(2)}`
+              )}
             </Button>
           </CardFooter>
         </Card>
