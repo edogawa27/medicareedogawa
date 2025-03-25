@@ -60,9 +60,16 @@ const getStatusColor = (status: AppointmentProps["status"]) => {
 const AppointmentCard = ({
   appointment,
   userType = "patient",
+  actionInProgress,
+  handleAppointmentAction,
 }: {
   appointment: AppointmentProps;
   userType?: "patient" | "provider" | "admin";
+  actionInProgress: string | null;
+  handleAppointmentAction: (
+    appointmentId: string,
+    action: string,
+  ) => Promise<void>;
 }) => {
   return (
     <Card className="mb-4 bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
@@ -486,6 +493,8 @@ const AppointmentList = ({
                   key={appointment.id}
                   appointment={appointment}
                   userType={userType}
+                  actionInProgress={actionInProgress}
+                  handleAppointmentAction={handleAppointmentAction}
                 />
               ))
           ) : (
@@ -505,6 +514,8 @@ const AppointmentList = ({
                   key={appointment.id}
                   appointment={appointment}
                   userType={userType}
+                  actionInProgress={actionInProgress}
+                  handleAppointmentAction={handleAppointmentAction}
                 />
               ))
           ) : (
@@ -524,6 +535,8 @@ const AppointmentList = ({
                   key={appointment.id}
                   appointment={appointment}
                   userType={userType}
+                  actionInProgress={actionInProgress}
+                  handleAppointmentAction={handleAppointmentAction}
                 />
               ))
           ) : (
@@ -543,6 +556,8 @@ const AppointmentList = ({
                   key={appointment.id}
                   appointment={appointment}
                   userType={userType}
+                  actionInProgress={actionInProgress}
+                  handleAppointmentAction={handleAppointmentAction}
                 />
               ))
           ) : (

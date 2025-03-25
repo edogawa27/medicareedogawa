@@ -22,7 +22,11 @@ export interface TimeSlot {
 export interface Appointment {
   id: string;
   patient_id: string;
+  patient_name?: string;
+  patient_email?: string;
   provider_id: string;
+  provider_name?: string;
+  provider_email?: string;
   service_id: string;
   appointment_date: string;
   start_time: string;
@@ -36,9 +40,22 @@ export interface Appointment {
   created_at: string;
   updated_at: string;
   // Joined fields
-  provider_name?: string;
+  provider?: {
+    name: string;
+    email: string;
+    avatar?: string;
+  };
+  service?: {
+    name: string;
+    description?: string;
+    icon?: string;
+  };
+  patient?: {
+    name: string;
+    email: string;
+    avatar?: string;
+  };
   service_name?: string;
-  patient_name?: string;
 }
 
 // API functions
@@ -127,7 +144,27 @@ export const createAppointment = async (appointmentData: {
   special_requirements?: string;
   payment_method: string;
   amount: number;
+  patient_name?: string;
+  patient_email?: string;
+  provider_details_required?: boolean;
 }): Promise<{ id: string }> => {
+  // First, get provider details if required
+  let providerDetails = null;
+  if (appointmentData.provider_details_required) {
+    const { data: providerData, error: providerError } = await supabase
+      .from("users")
+      .select("name, email")
+      .eq("id", appointmentData.provider_id)
+      .single();
+
+    if (providerError) {
+      console.error("Error fetching provider details:", providerError);
+    } else {
+      providerDetails = providerData;
+    }
+  }
+
+  // Create the appointment with linked data
   const { data, error } = await supabase
     .from("appointments")
     .insert([
@@ -135,6 +172,8 @@ export const createAppointment = async (appointmentData: {
         ...appointmentData,
         status: "upcoming",
         payment_status: "completed",
+        provider_name: providerDetails?.name,
+        provider_email: providerDetails?.email,
       },
     ])
     .select("id")
@@ -164,8 +203,8 @@ export const getAppointmentsByPatient = async (
     .select(
       `
       *,
-      provider:provider_id(name),
-      service:service_id(name)
+      provider:provider_id(name, email, avatar),
+      service:service_id(name, description, icon)
     `,
     )
     .eq("patient_id", patientId)
@@ -192,8 +231,8 @@ export const getAppointmentsByProvider = async (
     .select(
       `
       *,
-      patient:patient_id(name),
-      service:service_id(name)
+      patient:patient_id(name, email, avatar),
+      service:service_id(name, description, icon)
     `,
     )
     .eq("provider_id", providerId)

@@ -119,7 +119,7 @@ const BookingFlow = ({
       );
       const endTime = format(endDateTime, "HH:mm");
 
-      // Create appointment in the database
+      // Create appointment in the database with proper patient and provider linking
       const result = await createAppointment({
         patient_id: user.id,
         provider_id: bookingData.providerId,
@@ -131,6 +131,9 @@ const BookingFlow = ({
         special_requirements: bookingData.specialRequirements,
         payment_method: bookingData.paymentMethod,
         amount: calculateAmount(),
+        patient_name: user.name,
+        patient_email: user.email,
+        provider_details_required: true,
       });
 
       // Update booking data with the appointment ID
